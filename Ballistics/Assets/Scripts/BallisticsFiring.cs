@@ -1,45 +1,59 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class BallisticsFiring : MonoBehaviour
 {
 	public GameObject target;
 	public GameObject projectile;
+	public GameObject cannon;
 
 	public MeshRenderer materialSet;
 	public Material defaultMaterial;
 	public Material firingFailMaterial;
 
 	public float muzzleV;
-	public float canonDelay = 2.0f;
+
+	public float startDelay = 2f;
+	public float canonDelay = 2f;
 
 	public bool maxTime = false;
+
+	private Nullable<Vector3> firingVector;
 	
 	void Start()
 	{
 		materialSet.material = defaultMaterial;
-		InvokeRepeating("LaunchProjectile", 2f, canonDelay);
+		InvokeRepeating("LaunchProjectile", startDelay, canonDelay);
+	}
+
+	void Update()
+	{
+		firingVector = calculateFiringSolution(transform, muzzleV, target.transform.position, maxTime);
+
+		if (!firingVector.IsUnityNull()) {
+			Quaternion firingRot = Quaternion.LookRotation((Vector3)firingVector);
+			firingRot.eulerAngles = new Vector3(firingRot.eulerAngles.x + 90, firingRot.eulerAngles.y, firingRot.eulerAngles.z);
+			cannon.transform.rotation = firingRot;
+		}
 	}
 
 	public void LaunchProjectile()
 	{
-		Vector3 firingVector = calculateFiringSolution(target.transform.position);
-		
-		if (firingVector != Vector3.zero) {
+		if (!firingVector.IsUnityNull()) {
 			materialSet.material = defaultMaterial;
 
-			Quaternion firingRot =  Quaternion.LookRotation(firingVector);
+			Quaternion firingRot =  Quaternion.LookRotation((Vector3)firingVector);
 			firingRot.eulerAngles = new Vector3(firingRot.eulerAngles.x + 90, firingRot.eulerAngles.y, firingRot.eulerAngles.z);
 
 			Rigidbody instance = Instantiate(projectile, transform.position, firingRot).GetComponent<Rigidbody>();
-			instance.velocity = firingVector.normalized * muzzleV;
+			instance.velocity = ((Vector3)firingVector).normalized * muzzleV;
 		}
 		else materialSet.material = firingFailMaterial;
 	}
 
 	
-	private Vector3 calculateFiringSolution(Vector3 end)
+	public static Nullable<Vector3> calculateFiringSolution(Transform transform, float muzzleV, Vector3 end, bool maxTime = false)
 	{
 		Vector3 gravity = Physics.gravity;
 		Vector3 start = transform.position;
@@ -57,7 +71,7 @@ public class BallisticsFiring : MonoBehaviour
 		float b2minus4ac = b * b - 4 * a * c;
 		if (b2minus4ac < 0) {
 			Debug.Log("No Real Solution");
-			return Vector3.zero;
+			return null;
 		}
 
 		// Find the candidate times.

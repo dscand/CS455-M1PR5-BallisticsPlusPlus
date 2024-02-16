@@ -11,6 +11,8 @@ public class TargetSwitcher : MonoBehaviour
 	public Transform[] targetPlacements;
 	private int index = 0;
 
+	public float TimeToMove = 2.0f;
+
 	void Start()
 	{
 		gameObject.GetComponent<MeshRenderer>().material = defaultMaterial;
@@ -31,9 +33,18 @@ public class TargetSwitcher : MonoBehaviour
 
 		index++;
 		if (index > targetPlacements.Length - 1) index = 0;
-		transform.position = targetPlacements[index].position;
 		gameObject.GetComponent<MeshRenderer>().material = defaultMaterial;
 
-		yield return null;
+
+		Vector3 start = transform.position;
+		Vector3 end =  targetPlacements[index].position;
+
+		float t = 0;
+		while (t < 1) {
+			transform.position = Vector3.Lerp(start, end, t);
+			t += Time.deltaTime / TimeToMove;
+			yield return null;
+		}
+		transform.position = end;
 	}
 }
